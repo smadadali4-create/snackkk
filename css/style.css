@@ -11,7 +11,7 @@
 }
 
 :root {
-  --bg-primary: #0a0a0a;
+  --bg-primary: #050510;
   --bg-secondary: #111111;
   --bg-card: #1a1a1a;
   --neon-green: #00ff88;
@@ -31,6 +31,7 @@
 
 html {
   scroll-behavior: auto;
+  overflow: hidden;
 }
 
 body {
@@ -38,6 +39,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
+  overflow-y: hidden;
   min-height: 100vh;
   cursor: crosshair;
 }
