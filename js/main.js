@@ -436,26 +436,33 @@ let shelfMeshes = [];
 let raycaster, mouse;
 let animationFrame;
 
+let particles, particleSystem;
+let lastFrameTime = 0;
+let frameCount = 0;
+let isIdle = true;
+let idleTimer = null;
+
 function initScene() {
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0a);
-  scene.fog = new THREE.Fog(0x0a0a0a, 15, 25);
+  scene.background = new THREE.Color(0x050510);
+  scene.fog = new THREE.FogExp2(0x050510, 0.018);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 50);
   camera.position.set(0, 4, 10);
-  camera.lookAt(0, 1.5, -4);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
     alpha: true,
     powerPreference: 'high-performance',
   });
+  const dpr = Math.min(window.devicePixelRatio, 1.5);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(dpr);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.5;
   renderer.outputEncoding = THREE.sRGBEncoding;
 
   if (dom.container) {
@@ -465,59 +472,51 @@ function initScene() {
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 1.5, -3);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
+  controls.dampingFactor = 0.08;
   controls.maxPolarAngle = Math.PI / 2.2;
   controls.minPolarAngle = Math.PI / 4;
   controls.minDistance = 4;
   controls.maxDistance = 16;
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.5;
+  controls.autoRotateSpeed = 0.3;
   controls.update();
 
-  const ambientLight = new THREE.AmbientLight(0x222244, 0.4);
+  const ambientLight = new THREE.AmbientLight(0x111133, 0.3);
   scene.add(ambientLight);
 
-  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 0.8);
   dirLight.position.set(5, 12, 8);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
+  dirLight.shadow.camera.near = 0.5;
+  dirLight.shadow.camera.far = 20;
+  dirLight.shadow.camera.left = -10;
+  dirLight.shadow.camera.right = 10;
+  dirLight.shadow.camera.top = 10;
+  dirLight.shadow.camera.bottom = -10;
   scene.add(dirLight);
 
-  const fillLight = new THREE.DirectionalLight(0x4444ff, 0.3);
-  fillLight.position.set(-3, 4, -5);
-  scene.add(fillLight);
-
-  const hemiLight = new THREE.HemisphereLight(0x00d4ff, 0x002244, 0.6);
+  const hemiLight = new THREE.HemisphereLight(0x00d4ff, 0x0a0022, 0.8);
   scene.add(hemiLight);
 
-  const neonPositions = [
-    { pos: [-6, 5, -2], color: 0x00ff88 },
-    { pos: [6, 5, -2], color: 0x00d4ff },
-    { pos: [-6, 5, -8], color: 0x00ff88 },
-    { pos: [6, 5, -8], color: 0x00d4ff },
-    { pos: [0, 5, -5], color: 0xff006e },
-  ];
+  const rimLight = new THREE.DirectionalLight(0x00ff88, 0.4);
+  rimLight.position.set(-5, 0, 10);
+  scene.add(rimLight);
 
-  neonPositions.forEach((np) => {
-    const light = new THREE.PointLight(np.color, 2, 8);
-    light.position.set(np.pos[0], np.pos[1], np.pos[2]);
+  const neonColors = [0x00ff88, 0x00d4ff, 0xff006e];
+  const neonPos = [[-6, 4, -2], [6, 4, -2], [-6, 4, -7], [6, 4, -7], [0, 4, -5]];
+  neonPos.forEach((p, i) => {
+    const c = neonColors[i % 3];
+    const light = new THREE.PointLight(c, 1.5, 6);
+    light.position.set(p[0], p[1], p[2]);
     scene.add(light);
-
-    const stripGeo = new THREE.BoxGeometry(2, 0.08, 0.08);
-    const stripMat = new THREE.MeshBasicMaterial({
-      color: np.color,
-      transparent: true,
-      opacity: 0.6,
-    });
-    const strip = new THREE.Mesh(stripGeo, stripMat);
-    strip.position.set(np.pos[0], np.pos[1], np.pos[2]);
-    scene.add(strip);
   });
 
   createFloor();
   createShelves();
   createAllProducts();
+  createParticles();
 
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
@@ -528,14 +527,17 @@ function initScene() {
   document.addEventListener('touchstart', onTouchStart, { passive: true });
 
   state.sceneReady = true;
+  renderer.shadowMap.autoUpdate = true;
+  setTimeout(() => { renderer.shadowMap.autoUpdate = false; }, 1000);
 }
 
 function createFloor() {
   const geo = new THREE.PlaneGeometry(30, 30);
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x111111,
-    roughness: 0.3,
-    metalness: 0.2,
+    color: 0x080818,
+    roughness: 0.15,
+    metalness: 0.6,
+    envMapIntensity: 0.5,
   });
   const floor = new THREE.Mesh(geo, mat);
   floor.rotation.x = -Math.PI / 2;
@@ -543,34 +545,71 @@ function createFloor() {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const grid = new THREE.GridHelper(30, 20, 0x00ff88, 0x003322);
+  const grid = new THREE.GridHelper(30, 24, 0x00ff88, 0x004433);
   grid.position.y = -0.49;
   grid.material.transparent = true;
-  grid.material.opacity = 0.3;
+  grid.material.opacity = 0.4;
   scene.add(grid);
+}
+
+function createParticles() {
+  const count = 400;
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const sizes = new Float32Array(count);
+
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 30;
+    positions[i * 3 + 1] = Math.random() * 12;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 30 - 5;
+    const c = new THREE.Color().setHSL(0.4 + Math.random() * 0.3, 0.8, 0.5 + Math.random() * 0.3);
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+    sizes[i] = 0.02 + Math.random() * 0.06;
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  const mat = new THREE.PointsMaterial({
+    size: 0.06,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.6,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+
+  particles = new THREE.Points(geo, mat);
+  particles.position.y = 0;
+  scene.add(particles);
 }
 
 function createShelves() {
   const configs = [
     { x: -4.5, z: -2, height: 3.5, shelves: 3 },
     { x: 4.5, z: -2, height: 3.5, shelves: 3 },
-    { x: -4.5, z: -6, height: 3.5, shelves: 3 },
-    { x: 4.5, z: -6, height: 3.5, shelves: 3 },
-    { x: -4.5, z: -10, height: 3.5, shelves: 3 },
-    { x: 4.5, z: -10, height: 3.5, shelves: 3 },
+    { x: -4.5, z: -6, height: 3.5, shelves: 2 },
+    { x: 4.5, z: -6, height: 3.5, shelves: 2 },
   ];
+
+  const backMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8, metalness: 0.1 });
+  const sideMat = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.7, metalness: 0.3 });
+  const shelfMat = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.6, metalness: 0.4 });
 
   configs.forEach((cfg) => {
     const g = new THREE.Group();
 
-    const backMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.8, metalness: 0.1 });
     const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, cfg.height, 0.1), backMat);
     back.position.z = -0.3;
     back.castShadow = true;
     back.receiveShadow = true;
     g.add(back);
 
-    const sideMat = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.7, metalness: 0.3 });
     const ls = new THREE.Mesh(new THREE.BoxGeometry(0.06, cfg.height, 0.6), sideMat);
     ls.position.set(-1.07, 0, 0);
     g.add(ls);
@@ -579,14 +618,11 @@ function createShelves() {
     g.add(rs);
 
     const shelfSpacing = cfg.height / cfg.shelves;
-    const shelfMat = new THREE.MeshStandardMaterial({ color: 0x222244, roughness: 0.6, metalness: 0.4 });
-
     for (let i = 0; i < cfg.shelves; i++) {
       const y = -cfg.height / 2 + (i + 1) * shelfSpacing + 0.04;
       const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 0.55), shelfMat);
       shelf.position.set(0, y, 0);
       shelf.receiveShadow = true;
-      shelf.castShadow = true;
       g.add(shelf);
 
       const stripMat = new THREE.MeshBasicMaterial({
@@ -635,13 +671,13 @@ function createNeonSign() {
 
 function createAllProducts() {
   const positions = [
-    { x: -4.3, z: -2,  y: 2.0, rot: 0.4 },
-    { x: 4.3,  z: -2,  y: 3.6, rot: -0.4 },
-    { x: -4.3, z: -2,  y: 3.6, rot: 0.4 },
-    { x: 4.3,  z: -2,  y: 2.0, rot: -0.4 },
-    { x: -4.3, z: -6,  y: 2.6, rot: 0.3 },
-    { x: 4.3,  z: -6,  y: 2.6, rot: -0.3 },
-    { x: 0,    z: -9,  y: 1.8, rot: 0 },
+    { x: -4.3, z: -2,  y: 1.9, rot: 0.3 },
+    { x: 4.3,  z: -2,  y: 3.9, rot: -0.3 },
+    { x: -4.3, z: -2,  y: 3.9, rot: 0.3 },
+    { x: 4.3,  z: -2,  y: 1.9, rot: -0.3 },
+    { x: -4.3, z: -6,  y: 2.3, rot: 0.2 },
+    { x: 4.3,  z: -6,  y: 4.0, rot: -0.2 },
+    { x: -4.3, z: -6,  y: 4.0, rot: 0.2 },
   ];
 
   PRODUCTS.forEach((product, i) => {
@@ -656,32 +692,29 @@ function createProductMesh(product, pos) {
 
   if (product.shape === 'cylinder') {
     const [radius, height] = product.size;
-    const geo = new THREE.CylinderGeometry(radius, radius * 0.9, height, 32, 1, true);
-    const mat = new THREE.MeshPhysicalMaterial({
-      roughness: 0.2,
-      metalness: 0.6,
-      clearcoat: 0.3,
+    const geo = new THREE.CylinderGeometry(radius, radius * 0.9, height, 16, 1, true);
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.25,
+      metalness: 0.5,
       side: THREE.DoubleSide,
       map: TextureGenerator.createCanLabel(product),
     });
     mesh = new THREE.Mesh(geo, mat);
     mesh.castShadow = true;
 
-    const capMat = new THREE.MeshPhysicalMaterial({
+    const capMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(product.colorDark),
       roughness: 0.3,
-      metalness: 0.7,
+      metalness: 0.6,
     });
-    const topCap = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.95, 32), capMat);
+    const topCap = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.95, 16), capMat);
     topCap.position.y = height / 2;
     topCap.rotation.x = -Math.PI / 2;
-    topCap.castShadow = true;
     group.add(topCap);
 
-    const botCap = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.95, 32), capMat);
+    const botCap = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.95, 16), capMat);
     botCap.position.y = -height / 2;
     botCap.rotation.x = Math.PI / 2;
-    botCap.castShadow = true;
     group.add(botCap);
   } else {
     const [w, h, d] = product.size;
@@ -692,13 +725,14 @@ function createProductMesh(product, pos) {
     const sideTex = TextureGenerator.createSideLabel(product);
     const topTex = TextureGenerator.createTopBottomLabel(product);
 
+    const matOpts = { roughness: 0.3, metalness: 0.1 };
     const materials = [
-      new THREE.MeshPhysicalMaterial({ map: sideTex, roughness: 0.3, metalness: 0.1 }),
-      new THREE.MeshPhysicalMaterial({ map: sideTex, roughness: 0.3, metalness: 0.1 }),
-      new THREE.MeshPhysicalMaterial({ map: topTex, roughness: 0.3, metalness: 0.1 }),
-      new THREE.MeshPhysicalMaterial({ map: topTex, roughness: 0.3, metalness: 0.1 }),
-      new THREE.MeshPhysicalMaterial({ map: frontTex, roughness: 0.2, metalness: 0.2 }),
-      new THREE.MeshPhysicalMaterial({ map: backTex, roughness: 0.3, metalness: 0.1 }),
+      new THREE.MeshStandardMaterial({ map: sideTex, ...matOpts }),
+      new THREE.MeshStandardMaterial({ map: sideTex, ...matOpts }),
+      new THREE.MeshStandardMaterial({ map: topTex, ...matOpts }),
+      new THREE.MeshStandardMaterial({ map: topTex, ...matOpts }),
+      new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.2, metalness: 0.2 }),
+      new THREE.MeshStandardMaterial({ map: backTex, ...matOpts }),
     ];
 
     mesh = new THREE.Mesh(geo, materials);
@@ -717,7 +751,7 @@ function createProductMesh(product, pos) {
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
   });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.45, 32), ringMat);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.45, 16), ringMat);
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = -0.1;
   group.add(ring);
@@ -1212,12 +1246,20 @@ function animate() {
   animationFrame = requestAnimationFrame(animate);
   if (!scene || !camera || !renderer || !controls) return;
 
-  const time = Date.now() * 0.001;
+  frameCount++;
+  const now = performance.now();
+  const dt = now - lastFrameTime;
+  lastFrameTime = now;
+
+  if (document.hidden) return;
+
+  const time = now * 0.001;
+
+  // Products float and glow
   productMeshes.forEach((p, i) => {
     if (!p.group) return;
-    const floatOffset = Math.sin(time * 0.5 + i * 1.5) * 0.03;
     if (!p._isHovered) {
-      p.group.position.y = p.baseY + floatOffset;
+      p.group.position.y = p.baseY + Math.sin(time * 0.5 + i * 1.5) * 0.03;
     }
     const ring = p.group.children.find(c => c.isMesh && c.geometry.type === 'RingGeometry');
     if (ring) {
@@ -1226,6 +1268,20 @@ function animate() {
       ring.scale.set(s, s, 1);
     }
   });
+
+  // Animate particles
+  if (particles) {
+    const pos = particles.geometry.attributes.position.array;
+    for (let i = 0; i < pos.length; i += 3) {
+      pos[i + 1] += Math.sin(time * 0.3 + i) * 0.001;
+      pos[i + 2] += Math.sin(time * 0.2 + i * 0.5) * 0.0005;
+      if (pos[i + 1] > 12) pos[i + 1] = 0;
+      if (pos[i + 1] < 0) pos[i + 1] = 12;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+    particles.rotation.y = time * 0.02;
+    particles.material.opacity = 0.4 + Math.sin(time * 0.3) * 0.2;
+  }
 
   controls.update();
   renderer.render(scene, camera);
