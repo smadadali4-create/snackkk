@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>snackk — Agency Supermarket</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%2300ff88'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-size='20' font-weight='bold' fill='%230a0a0a'>S</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Preloader -->
+  <div id="preloader">
+    <div class="preloader-content">
+      <div class="preloader-barcode">||||||||||</div>
+      <div class="preloader-text">SCANNING PRODUCTS...</div>
+      <div class="preloader-progress">
+        <div class="preloader-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav id="navbar">
+    <div class="nav-brand">
+      <span class="nav-logo">⟐</span>
+      <span class="nav-name">snackk</span>
+    </div>
+    <div class="nav-links">
+      <a href="#products" class="nav-link">SHOP</a>
+      <a href="#contact" class="nav-link">CONTACT</a>
+      <button id="cartBtn" class="nav-cart-btn">
+        <span class="cart-icon">🛒</span>
+        <span class="cart-count">0</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Cart Sidebar -->
+  <div id="cartSidebar" class="cart-sidebar" data-lenis-prevent>
+    <div class="cart-header">
+      <h2>YOUR CART</h2>
+      <button id="closeCart" class="close-btn">✕</button>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <div class="cart-empty">YOUR CART IS EMPTY</div>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-total">
+        <span>TOTAL</span>
+        <span id="cartTotal">$0</span>
+      </div>
+      <button id="checkoutBtn" class="checkout-btn" disabled>
+        PROCEED TO CHECKOUT →
+      </button>
+    </div>
+  </div>
+
+  <!-- Overlay -->
+  <div id="overlay" class="overlay"></div>
+
+  <!-- Receipt Modal -->
+  <div id="receiptModal" class="receipt-modal" data-lenis-prevent>
+    <div class="receipt">
+      <div class="receipt-top"></div>
+      <div class="receipt-header">
+        <h2>⟐ SNACKK</h2>
+        <p class="receipt-sub">PREMIUM AGENCY SERVICES</p>
+        <div class="receipt-divider">— — — — — — — — — — — — — — —</div>
+        <p class="receipt-store">STORE #0420</p>
+        <p class="receipt-date" id="receiptDate"></p>
+      </div>
+      <div class="receipt-items" id="receiptItems"></div>
+      <div class="receipt-divider">— — — — — — — — — — — — — — —</div>
+      <div class="receipt-total-section">
+        <div class="receipt-total-line">
+          <span>TOTAL DUE</span>
+          <span id="receiptTotal">$0</span>
+        </div>
+        <div class="receipt-total-line">
+          <span>PAID</span>
+          <span>$0</span>
+        </div>
+        <div class="receipt-total-line">
+          <span>CHANGE</span>
+          <span>$0</span>
+        </div>
+      </div>
+      <div class="receipt-divider">— — — — — — — — — — — — — — —</div>
+      <div class="receipt-barcode">||||||||||||||||||||||||||||||||||||||||</div>
+      <p class="receipt-thanks">THANK YOU FOR YOUR BUSINESS!</p>
+      <p class="receipt-feedback">scan.code/snackk-feedback</p>
+      <div class="receipt-bottom"></div>
+      <button id="closeReceipt" class="close-receipt-btn">✕ CLOSE RECEIPT</button>
+    </div>
+  </div>
+
+  <!-- Product Detail Modal -->
+  <div id="productModal" class="product-modal" data-lenis-prevent>
+    <button id="closeProductModal" class="close-btn">✕</button>
+    <div class="product-detail-content">
+      <div class="product-detail-left" id="productDetailLeft">
+        <div class="product-detail-3d" id="productDetail3D"></div>
+      </div>
+      <div class="product-detail-right" id="productDetailRight">
+        <div class="product-detail-badge" id="productBadge">BEST SELLER</div>
+        <h2 id="productDetailName">PRODUCT NAME</h2>
+        <p class="product-detail-tagline" id="productDetailTagline">Tagline here</p>
+        <div class="product-detail-price" id="productDetailPrice">$0</div>
+
+        <div class="nutrition-facts">
+          <h3>NUTRITION FACTS</h3>
+          <div class="nutrition-table" id="nutritionTable">
+            <div class="nutrition-row"><span>Creativity</span><span id="nut1">0%</span></div>
+            <div class="nutrition-row"><span>Strategy</span><span id="nut2">0%</span></div>
+            <div class="nutrition-row"><span>Execution</span><span id="nut3">0%</span></div>
+            <div class="nutrition-row"><span>Innovation</span><span id="nut4">0%</span></div>
+            <div class="nutrition-row"><span>Caffeine</span><span id="nut5">0%</span></div>
+          </div>
+        </div>
+
+        <div class="product-detail-sku">
+          <span>SKU: </span><span id="productSKU">SNK-0000</span>
+        </div>
+
+        <button id="addToCartBtn" class="add-to-cart-btn">
+          ADD TO CART — <span id="addToCartPrice">$0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js Canvas Container -->
+  <div id="three-container"></div>
+
+  <!-- Lenis Scrollable Content -->
+  <div id="lenis-wrapper">
+    <div id="lenis-content">
+
+  <!-- Hero Section Overlay -->
+  <section id="hero">
+    <div class="hero-content">
+      <div class="hero-badge">✦ EST. 2024</div>
+      <h1 class="hero-title">
+        <span class="hero-line">AGENCY</span>
+        <span class="hero-line highlight">SUPERMARKET</span>
+      </h1>
+      <p class="hero-subtitle">Premium creative services,<br/>shelf-ready & delivered fresh.</p>
+      <div class="hero-cta">
+        <a href="#products" class="btn-primary">BROWSE PRODUCTS ↓</a>
+      </div>
+      <div class="hero-scroll">
+        <span>SCROLL TO EXPLORE</span>
+        <div class="scroll-arrow">↓</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Products Section -->
+  <section id="products" class="section">
+    <div class="section-header">
+      <span class="section-tag">★ FEATURED</span>
+      <h2>OUR SERVICES</h2>
+      <p class="section-desc">Each service is packaged like a premium product.<br/>Hover to inspect. Click to learn more.</p>
+    </div>
+    <div class="products-info">
+      <div class="product-counter">
+        <span id="productCount">7</span> PRODUCTS
+      </div>
+      <div class="product-legend">
+        <span>🖱 HOVER TO ROTATE</span>
+        <span>👆 CLICK FOR DETAILS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="section">
+    <div class="section-header">
+      <span class="section-tag">✦ ABOUT</span>
+      <h2>WHY A SUPERMARKET?</h2>
+    </div>
+    <div class="about-grid">
+      <div class="about-card">
+        <div class="about-icon">📦</div>
+        <h3>PACKAGED EXCELLENCE</h3>
+        <p>We package our creative services like premium products — because great work deserves great presentation.</p>
+      </div>
+      <div class="about-card">
+        <div class="about-icon">🔖</div>
+        <h3>TRANSPARENT PRICING</h3>
+        <p>Like a supermarket, our prices are clear and upfront. No hidden fees, no surprises.</p>
+      </div>
+      <div class="about-card">
+        <div class="about-icon">🛍️</div>
+        <h3>SHOP THE EXPERIENCE</h3>
+        <p>Browse, inspect, and add to cart. The future of agency selection is here.</p>
+      </div>
+      <div class="about-card">
+        <div class="about-icon">🧾</div>
+        <h3>RECEIPT INCLUDED</h3>
+        <p>Every purchase generates a detailed receipt. Because we believe in documentation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="section">
+    <div class="section-header">
+      <span class="section-tag">▶ GUIDE</span>
+      <h2>HOW TO SHOP</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>BROWSE</h3>
+        <p>Explore our shelf of creative services</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>INSPECT</h3>
+        <p>Hover & click to examine each package</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>ADD TO CART</h3>
+        <p>Select services you need</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <h3>CHECKOUT</h3>
+        <p>Get your receipt & we'll deliver</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section id="contact" class="section">
+    <div class="section-header">
+      <span class="section-tag">✉ CONTACT</span>
+      <h2>GET IN TOUCH</h2>
+      <p class="section-desc">Have a custom order? Need a bulk discount?<br/>Reach out and we'll create something fresh for you.</p>
+    </div>
+    <div class="contact-form">
+      <form id="contactForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">NAME</label>
+            <input type="text" id="name" placeholder="YOUR NAME" required />
+          </div>
+          <div class="form-group">
+            <label for="email">EMAIL</label>
+            <input type="email" id="email" placeholder="YOU@COMPANY.COM" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="service">SERVICE INTERESTED IN</label>
+          <select id="service">
+            <option value="">SELECT A SERVICE...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="message">MESSAGE</label>
+          <textarea id="message" placeholder="TELL US ABOUT YOUR PROJECT..." rows="4"></textarea>
+        </div>
+        <button type="submit" class="btn-submit">
+          SEND MESSAGE → <span class="btn-barcode">|||||</span>
+        </button>
+      </form>
+      <div class="contact-info">
+        <div class="contact-line">
+          <span class="contact-label">STORE</span>
+          <span>SNACKK HQ</span>
+        </div>
+        <div class="contact-line">
+          <span class="contact-label">HOURS</span>
+          <span>24/7 — ALWAYS OPEN</span>
+        </div>
+        <div class="contact-line">
+          <span class="contact-label">AISLE</span>
+          <span>CREATIVE SERVICES</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <span class="footer-logo">⟐</span>
+        <span>SNACKK</span>
+      </div>
+      <div class="footer-text">
+        <span>AGENCY SUPERMARKET © 2024</span>
+        <span class="footer-barcode">||| SCAN FOR GOOD VIBES |||</span>
+      </div>
+    </div>
+  </footer>
+
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
