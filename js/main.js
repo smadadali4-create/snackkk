@@ -456,7 +456,7 @@ function initScene() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.outputEncoding = THREE.sRGBEncoding;
 
   if (dom.container) {
     dom.container.appendChild(renderer.domElement);
